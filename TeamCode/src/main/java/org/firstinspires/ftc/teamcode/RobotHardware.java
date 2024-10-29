@@ -33,6 +33,7 @@ import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.har
 import android.util.Size;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
@@ -65,7 +66,7 @@ import org.firstinspires.ftc.vision.VisionPortal;
 public class RobotHardware {
 
     /* Declare OpMode members. */
-    private LinearOpMode myOpMode = null;   // gain access to methods in the calling OpMode.
+    private OpMode myOpMode = null;   // gain access to methods in the calling OpMode.
 
     // Define Motor and Servo objects  (Make them private so they can't be accessed externally)
     private DcMotor leftFrontDrive   = null;
@@ -97,7 +98,7 @@ public class RobotHardware {
 //    private VisionPortal visionPortal;
 
     // Define a constructor that allows the OpMode to pass a reference to itself.
-    public RobotHardware(LinearOpMode opmode) {
+    public RobotHardware(OpMode opmode) {
         myOpMode = opmode;
     }
 

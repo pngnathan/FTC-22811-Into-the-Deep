@@ -63,7 +63,7 @@ import com.qualcomm.robotcore.util.Range;
  *                              4) Add elapsed time tracking and implement better button press delay method. See https://stemrobotics.cs.pdx.edu/node/7262.html
  */
 
-@TeleOp(name="Morris POV Drive", group="Robot")
+@TeleOp(name="Morris POV Drive", group="Test Code")
 //@Disabled
 public class MorrisPOVDrive extends LinearOpMode {
 
