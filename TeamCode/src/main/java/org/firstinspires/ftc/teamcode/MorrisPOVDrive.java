@@ -53,14 +53,17 @@ import com.qualcomm.robotcore.util.Range;
  */
 
 /**
- * Mr. Morris:          TO DO:  1) Consider remapping buttons for movement to one joystick and arm rotation to other joystick,
- *                                 or triggers for forward/backward, left stick for turning, right stick for steering
- *                              2) Set preset locations for arm height and maybe gripper limits
+ * Mr. Morris:          TO DO:  1) Test, then revise code for arm, lift, gripper, and wrist
+ *                              2) Write code for presets for arm rotation, lift, etc. An automated hang sequence is especially needed.
+ *                              3) Once second lift motor is installed - Implement code in RobotHardware
+ *                              4) Change code when active intake and color sensor is implemented
+ *                              5) Revise code for vision, commented out for now.
+ *                              6) Migrate code to Iterative program so that end game behavior can be set - i.e. the hang mechanism can stay engaged for several seconds after stop.
+ *                              7) Consider implementing Driver-centric toggle
  *
  *     COMPLETE, NEEDS TESTING: 1) Finish updating to match RobotHardware file definitions, then delete or comment out @Disabled
- *                              2) Enable Camera live view
  *                              3) Use math to keep wrist turned so that gripper is level with ground (rotate relative to arm rotation)
- *                              4) Add elapsed time tracking and implement better button press delay method. See https://stemrobotics.cs.pdx.edu/node/7262.html
+ *                              4) Add elapsed time tracking and implement better button press delay method. See <a href="https://stemrobotics.cs.pdx.edu/node/7262.html">...</a>
  */
 
 @TeleOp(name="Morris POV Drive", group="Test Code")
@@ -75,10 +78,12 @@ public class MorrisPOVDrive extends LinearOpMode {
     public void runOpMode() {
         double drive;
         double turn;
-//        double armRotateTarget = robot.getArmAngle(), armExtendTarget = robot.getArmExtension(); // Initialize arm to current position
-//        double gripper   = 0;
+        double strafe;
+        double armRotateTarget = robot.getArmAngle();  // Initialize arm to current position
+        double liftExtendTarget = robot.getLiftExtension(); // Initialize lift to current position
+        double gripper   = 0;
         double aLastTime = 0, bLastTime = 0, xLastTime = 0, yLastTime = 0, rBLastTime = 0, lBLastTime = 0;
-        boolean backButtonPressed = false;
+    //    boolean backButtonPressed = false;
         final double BUTTON_PRESS_DELAY = .075;// seconds, keep track of how long a button has been pressed and allow for a quick press to move a servo a small amount while a long press moves the servo a longer distance.
 
         // initialize all the hardware, using the hardware class. See how clean and simple this is?
@@ -94,17 +99,17 @@ public class MorrisPOVDrive extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
-            // Save CPU resources; can resume streaming when needed.
-            // This uses a method of tracking the state of the button called latching. See https://stemrobotics.cs.pdx.edu/node/7262.html.
-            // It won't toggle until the button is released. This avoids double-presses.
-            if (gamepad1.back) {
-                backButtonPressed = true;
-            }
-            else if (backButtonPressed && !gamepad1.back)
-            {
-                backButtonPressed = false;
-//                robot.toggleStreaming();
-            }
+//            // Save CPU resources; can resume streaming when needed.
+//            // This uses a method of tracking the state of the button called latching. See https://stemrobotics.cs.pdx.edu/node/7262.html.
+//            // It won't toggle until the button is released. This avoids double-presses.
+//            if (gamepad1.back) {
+//                backButtonPressed = true;
+//            }
+//            else if (backButtonPressed && !gamepad1.back)
+//            {
+//                backButtonPressed = false;
+////                robot.toggleStreaming();
+//            }
                 
 
             // Run wheels in POV mode (note: The joystick goes negative when pushed forward, so negate it)
@@ -113,10 +118,11 @@ public class MorrisPOVDrive extends LinearOpMode {
 
             ////Mr. Morris: Alternatively we could use right trigger for forward, left trigger for reverse, left_stick_x for turning
             drive = -gamepad1.left_stick_y;
+            strafe = gamepad1.left_stick_x;
             turn  =  gamepad1.right_stick_x;
 
             // Combine drive and turn for blended motion. Use org.firstinspires.ftc.teamcode.RobotHardware class
-            robot.driveRobot(drive, turn);
+            robot.mechanumDriveRobot(drive, strafe, turn);
 
             // Use gamepad left & right Bumpers to open and close the gripper claw
             // Use the SERVO constants defined in org.firstinspires.ftc.teamcode.RobotHardware class.
@@ -125,61 +131,62 @@ public class MorrisPOVDrive extends LinearOpMode {
 
             // Open gripper when right bumper is pressed if it's not already at max, close gripper when left bumper is pressed if it's not already at min
             // Keeps track of how long a button is pressed and moves a small amount for a short press and a larger amount for a long press
-//            if (gamepad1.right_bumper)
-//                if (getRuntime() - rBLastTime > BUTTON_PRESS_DELAY)
-//                {
-//                    if (gripper < RobotHardware.GRIPPER_MAX)
-//                        gripper += RobotHardware.GRIPPER_SPEED;
-//                    rBLastTime = getRuntime();
-//                }
-//            else if (gamepad1.left_bumper)
-//                {
-//                    if (getRuntime() - lBLastTime > BUTTON_PRESS_DELAY)
-//                        if (gripper > RobotHardware.GRIPPER_MIN)
-//                            gripper -= RobotHardware.GRIPPER_INCREMENT;
-//                    lBLastTime = getRuntime();
-//                }
-//            gripper = Range.clip(gripper, -0.5, 0.5);
-//
-//            // Move servo to new position.  Use org.firstinspires.ftc.teamcode.RobotHardware class
-//            robot.setGripperPosition(gripper);
+            if (gamepad1.right_bumper)
+                if (getRuntime() - rBLastTime > BUTTON_PRESS_DELAY)
+                {
+                    if (gripper < RobotHardware.GRIPPER_MAX)
+                        gripper += RobotHardware.GRIPPER_INCREMENT;
+                    rBLastTime = getRuntime();
+                }
+            else if (gamepad1.left_bumper)
+                {
+                    if (getRuntime() - lBLastTime > BUTTON_PRESS_DELAY)
+                        if (gripper > RobotHardware.GRIPPER_MIN)
+                            gripper -= RobotHardware.GRIPPER_INCREMENT;
+                    lBLastTime = getRuntime();
+                }
+            gripper = Range.clip(gripper, -0.5, 0.5);
 
-            // Use gamepad buttons to move arm up (Y) and down (A)
-            // Use the MOTOR constants defined in org.firstinspires.ftc.teamcode.RobotHardware class.
-            //// Mr. Morris: Consider redefining the arm movements to use a joystick with a,b,x,y buttons reserved for preset positions like in FTC season
-//            if (gamepad1.y)
-//                if (getRuntime() - yLastTime > BUTTON_PRESS_DELAY) {
-//                    if (armRotateTarget < RobotHardware.ARM_ROTATE_MAX)
-//                        armRotateTarget += RobotHardware.ARM_INCREMENT_DEGREES; // rotate arm up when Y is pressed
-//                    yLastTime = getRuntime();
-//                }
-//            else if (gamepad1.a)
-//                if (getRuntime() - aLastTime > BUTTON_PRESS_DELAY) {
-//                    if (armRotateTarget > RobotHardware.ARM_ROTATE_MIN)
-//                        armRotateTarget -= RobotHardware.ARM_INCREMENT_DEGREES; // rotate arm down when A is pressed
-//                    aLastTime = getRuntime();
-//                }
+            // Move servo to new position.  Use org.firstinspires.ftc.teamcode.RobotHardware class
+            robot.setGripperPosition(gripper);
 
-            // Use gamepad buttons to extend arm (X) and retract arm (B)
+            // Use gamepad buttons to rotate arm forward/down (Y) and back/up (A)
             // Use the MOTOR constants defined in org.firstinspires.ftc.teamcode.RobotHardware class.
-//            if (gamepad1.x && getRuntime() - xLastTime > BUTTON_PRESS_DELAY) {
-//                if (armExtendTarget < RobotHardware.ARM_EXTEND_MAX)
-//                    armExtendTarget += RobotHardware.ARM_EXTEND_POWER; // extend when X is pressed
-//                xLastTime = getRuntime();
-//                }
-//            else if (gamepad1.b && getRuntime() - bLastTime > BUTTON_PRESS_DELAY) {
-//                if (armExtendTarget > RobotHardware.ARM_RETRACT_MAX) {
-//                    armExtendTarget -= RobotHardware.ARM_RETRACT_POWER; // retract when B is pressed
-//                    // CLEAN UP LANGUAGE - refers to power but should be angle, make it like arm rotate
-//                }
-//                bLastTime = getRuntime();
-//            }
-//            else armExtendTarget = 0; // don't move if x and b aren't pressed.
-//            robot.setArmPosition(armRotateTarget, armExtendTarget); // send rotation and extension values to robot
-//
-//            // Move wrist so that it moves when arm rotates to keep gripper parallel to floor
-//            // e.g. if arm angle is at -30 (30 degrees below forward horizontal), wrist must be 30 (30 degrees above forward horizontal) to keep gripper horizontal
-//            robot.setWristAngle(-robot.getArmAngle());
+            /** Mr. Morris: Consider redefining the arm movements to use a joystick with a,b,x,y buttons reserved for preset positions like in FTC season */
+            if (gamepad1.y)
+                if (getRuntime() - yLastTime > BUTTON_PRESS_DELAY) {
+                    if (armRotateTarget < RobotHardware.ARM_ROTATE_MAX)
+                        armRotateTarget += RobotHardware.ARM_INCREMENT_DEGREES; // rotate arm up when Y is pressed
+                    yLastTime = getRuntime();
+                }
+            else if (gamepad1.a)
+                if (getRuntime() - aLastTime > BUTTON_PRESS_DELAY) {
+                    if (armRotateTarget > RobotHardware.ARM_ROTATE_MIN)
+                        armRotateTarget -= RobotHardware.ARM_INCREMENT_DEGREES; // rotate arm down when A is pressed
+                    aLastTime = getRuntime();
+                }
+
+            // Use gamepad buttons to extend lift (X) and retract lift (B)
+            // Use the MOTOR constants defined in org.firstinspires.ftc.teamcode.RobotHardware class.
+            if (gamepad1.x && getRuntime() - xLastTime > BUTTON_PRESS_DELAY) {
+                if (liftExtendTarget < RobotHardware.LIFT_EXTEND_MAX)
+                    liftExtendTarget += RobotHardware.LIFT_EXTEND_POWER; // extend when X is pressed
+                xLastTime = getRuntime();
+                }
+            else if (gamepad1.b && getRuntime() - bLastTime > BUTTON_PRESS_DELAY) {
+                if (liftExtendTarget > RobotHardware.LIFT_RETRACT_MAX) {
+                    liftExtendTarget -= RobotHardware.LIFT_RETRACT_POWER; // retract when B is pressed
+                }
+                bLastTime = getRuntime();
+            }
+            else liftExtendTarget = 0; // don't move if x and b aren't pressed.
+            robot.setArmPosition(armRotateTarget); //send rotation values to robot
+            robot.setLiftPosition(liftExtendTarget); // send extension values to robot
+
+            /** This code needs updated. We probably don't want the wrist matching the arm angle all the time since it needs to reach back to the lift */
+            // Move wrist so that it moves when arm rotates to keep gripper parallel to floor
+            // e.g. if arm angle is at -30 (30 degrees below forward horizontal), wrist must be 30 (30 degrees above forward horizontal) to keep gripper horizontal
+            robot.setWristAngle(-robot.getArmAngle());
 
             // Send telemetry messages to explain controls and show robot status
             telemetry.addData("Drive", "Left Stick");

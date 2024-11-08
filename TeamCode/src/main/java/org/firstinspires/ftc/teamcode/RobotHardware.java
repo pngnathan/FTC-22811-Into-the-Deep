@@ -73,29 +73,29 @@ public class RobotHardware {
     private DcMotor leftRearDrive   = null;
     private DcMotor rightFrontDrive  = null;
     private DcMotor rightRearDrive  = null;
-//    private DcMotor armRotate = null;
-//    private DcMotor armExtend = null;
-//    private Servo   wrist = null;
-//    private Servo   gripper = null;
+    private DcMotor armRotate = null;
+    private DcMotor liftExtend = null;
+    private Servo   wrist = null;
+    private Servo   gripper = null;
+
 
     // Define Drive constants.  Make them public so they CAN be used by the calling OpMode
-    //Mr. Morris: TO DO: test and update servo speeds.
-//    public static final double MID_SERVO       =  0.5 ;
-//    public static final double GRIPPER_INCREMENT = 0.02, GRIPPER_MAX = 1, GRIPPER_MIN = 0 ;  // sets rate to move gripper servo and max and min travel. If you use SRS servo programmer to set limits, this will be 1 and 0. If you need to limit travel in the software, this is where to do it.
-//    public static final double WRIST_SPEED = 0.02 ; // sets rate to move wrist servo
-//    public static final double WRIST_MAX_ANGLE  = 300 ; // Adjust this angle if SRS servo programmer has limited servo travel to less than 300
-//    public static final int ARM_INCREMENT_DEGREES = 5, ARM_ROTATE_MAX = 225, ARM_ROTATE_MIN = -45 ;
-//    public static final double ARM_ROTATE_ENCODER_RESOLUTION = 2786.2, ARM_ROTATE_GEAR_RATIO = 20 ;
-//    public static final double ARM_EXTEND_POWER  = 0.10, ARM_RETRACT_POWER  = -0.10 ;
-//    public static final double ARM_EXTEND_MAX = 1000; // TO DO: This is almost certainly a wrong number for the max travel.
-//    public static final double ARM_RETRACT_MAX = 0; // TO DO: This is almost certainly a wrong number for the max travel.
+    // Mr. Morris: TO DO: test and update servo speeds.
+    public static final double MID_SERVO       =  0.5 ;
+    public static final double GRIPPER_INCREMENT = 0.02, GRIPPER_MAX = 1, GRIPPER_MIN = 0 ;  // sets rate to move gripper servo and max and min travel. If you use SRS servo programmer to set limits, this will be 1 and 0. If you need to limit travel in the software, this is where to do it.
+    public static final double WRIST_SPEED = 0.02 ; // sets rate to move wrist servo
+    public static final double WRIST_MAX_ANGLE  = 300 ; // Adjust this angle if SRS servo programmer has limited servo travel to less than 300
+    public static final int ARM_INCREMENT_DEGREES = 5, ARM_ROTATE_MAX = 225, ARM_ROTATE_MIN = -45 ;
+    public static final double ARM_ROTATE_ENCODER_RESOLUTION = 2786.2, ARM_ROTATE_GEAR_RATIO = 20 ;
+    public static final double LIFT_EXTEND_POWER  = 0.10, LIFT_RETRACT_POWER  = -0.10 ;
+    public static final double LIFT_EXTEND_MAX = 1000; // TO DO: This is almost certainly a wrong number for the max travel.
+    public static final double LIFT_RETRACT_MAX = 0; // TO DO: This is almost certainly a wrong number for the max travel.
 
-    // Define vision defaults
-//    private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
-//    private boolean streaming = true; // streaming starts off true, gets toggled in toggleStreaming
-
-    // The variable to store our instance of the vision portal.
-//    private VisionPortal visionPortal;
+//     Define vision defaults
+//        private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
+//        private boolean streaming = true; // streaming starts off true, gets toggled in toggleStreaming
+//     The variable to store our instance of the vision portal.
+//        private VisionPortal visionPortal;
 
     // Define a constructor that allows the OpMode to pass a reference to itself.
     public RobotHardware(OpMode opmode) {
@@ -130,8 +130,8 @@ public class RobotHardware {
         leftRearDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightRearDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-/*      armRotate.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        armExtend.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        armRotate.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        liftExtend.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // Define and initialize ALL installed servos.
         wrist = myOpMode.hardwareMap.get(Servo.class, "wrist");
@@ -139,6 +139,7 @@ public class RobotHardware {
         wrist.setPosition(MID_SERVO);
         gripper.setPosition(MID_SERVO);
 
+        /*
         // Create the vision portal by using a builder.
         VisionPortal.Builder builder = new VisionPortal.Builder();
 
@@ -165,35 +166,43 @@ public class RobotHardware {
 
         // Build the Vision Portal, using the above settings.
         visionPortal = builder.build();
-*/
+
         myOpMode.telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
+        */
         myOpMode.telemetry.addData(">", "Hardware Initialized");
         myOpMode.telemetry.update();
     }
 
     /**
-     * Calculates the left/right motor powers required to achieve the requested
-     * robot motions: Drive (Axial motion) and Turn (Yaw motion).
+     * Calculates the motor powers required to achieve the requested
+     * robot motions: drive (Axial motion) strafe (Lateral motion) and turn (Yaw motion).
      * Then sends these power levels to the motors.
      *
-     * @param Drive     Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
-     * @param Turn      Right/Left turning power (-1.0 to 1.0) +ve is CW
+     * @param drive     Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
+     * @param strafe    Right/Left strafing (-1.0 to 1.0) +ve is right
+     * @param turn      Right/Left turning power (-1.0 to 1.0) +ve is CW
      */
-    public void driveRobot(double Drive, double Turn) {
-        // Combine drive and turn for blended motion.
-        double left  = Drive + Turn;
-        double right = Drive - Turn;
+    public void mechanumDriveRobot(double drive, double strafe, double turn) {
+        // Combine drive, strafe, and turn for blended motion.
+        double leftFront  = drive + strafe + turn;
+        double LeftRear = drive - strafe + turn;
+        double rightFront = drive - strafe - turn;
+        double rightRear = drive + strafe - turn;
 
-        // Scale the values so neither exceed +/- 1.0
-        double max = Math.max(Math.abs(left), Math.abs(right));
+        // Scale the values so none of them exceed +/- 1.0
+        double max1 = Math.max(Math.abs(leftFront),Math.abs(LeftRear));
+        double max2 = Math.max(Math.abs(rightFront), Math.abs(rightRear));
+        double max = Math.max(Math.abs(max1), Math.abs(max2));
         if (max > 1.0)
         {
-            left /= max;
-            right /= max;
+            leftFront /= max;
+            LeftRear /= max;
+            rightFront /= max;
+            rightRear /= max;
         }
 
         // Use existing function to drive wheels on both sides..
-        setDrivePower(left, right);
+        setDrivePower(leftFront, LeftRear, rightFront, rightRear);
     }
 
     /**
@@ -202,71 +211,81 @@ public class RobotHardware {
      * Mr. Morris: Our robot is 4 wheel drive, but in tank drive configuration the two left wheels
      *             always travel at the same speed and the two right wheels travel at the same speed.
      *
-     * @param leftWheel     Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
-     * @param rightWheel    Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
+     * @param leftFront     Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
+     * @param leftRear      Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
+     * @param rightFront    Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
+     * @param rightRear     Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
      */
-    public void setDrivePower(double leftWheel, double rightWheel) {
+
+    public void setDrivePower(double leftFront, double leftRear, double rightFront, double rightRear) {
         // Output the values to the motor drives.
-        leftFrontDrive.setPower(leftWheel);
-        leftRearDrive.setPower(leftWheel);
-        rightFrontDrive.setPower(rightWheel);
-        rightRearDrive.setPower(rightWheel);
+        leftFrontDrive.setPower(leftFront);
+        leftRearDrive.setPower(leftRear);
+        rightFrontDrive.setPower(rightFront);
+        rightRearDrive.setPower(rightRear);
     }
 
-//    /**
-//     * Pass the requested arm power to the appropriate hardware drive motor
-//     *
-//     * @param targetAngle angle from -45 to 225
-//     * @param targetExtension encoder value ------ Range?
-//     */
-//    public void setArmPosition(double targetAngle, double targetExtension) {
-//        armRotate.setTargetPosition((int) targetAngle);
-//        armExtend.setTargetPosition((int) targetExtension);
-//        /**
-//         * Need to write code to set power whose direction is dependent on current position,
-//         * preferably a PID type implementation
-//         */
-//    }
-//
-//    /**
-//     * Get the encoder information for the arm rotation motor and convert it to degrees.
-//     * Mr. Morris: TO DO: Might need to initialize arm angle on startup and/or adjust for starting/resting position.
-//     *                    i.e. if starting location is -45 degrees, initialize and offset it at program start to account for this.
-//     *                    Add telemetry statement to test and adjust this.
-//     */
-//    public double getArmAngle(){
-//        return armRotate.getCurrentPosition() * 360 / (ARM_ROTATE_ENCODER_RESOLUTION * ARM_ROTATE_GEAR_RATIO);
-//    }
-//
-//    public double getArmExtension(){
-//        return armExtend.getCurrentPosition();
-//    }
-//
-//    /**
-//     * Mr. Morris: TO DO: may want to work in degrees, then convert to range from -0.5 to 0.5, see setWristAngle() function
-//     * Send the gripper the new position to go to
-//     * @param offset distance from center mid point.
-//     */
-//    public void setGripperPosition(double offset) {
-//        offset = Range.clip(offset, -0.5, 0.5);
-//        gripper.setPosition(MID_SERVO + offset);
-//    }
-//
-//    /**
-//     * Send the wrist to a certain angle in degrees
-//     * @param angle is the angle the wrist should go to, in degrees
-//     */
-//    public void setWristAngle(double angle){
-//        angle = Range.clip(angle / WRIST_MAX_ANGLE, -0.5, 0.5); // convert angle in degrees to a range from -0.5 to 0.5.
-//        wrist.setPosition(MID_SERVO + angle);
-//    }
-//
-//    // Toggle streaming on/off to save CPU resources
-//    public void toggleStreaming(){
-//        if (streaming) visionPortal.stopStreaming();
-//        else {
-//            visionPortal.resumeStreaming();
-//        }
-//        streaming = !streaming;
-//    }
+    /**
+     * Pass the requested arm power to the appropriate hardware drive motor
+     *
+     * @param targetAngle angle from -45 to 225
+     */
+    public void setArmPosition(double targetAngle) {
+        armRotate.setTargetPosition((int) targetAngle);
+        /**
+         * Need to write code to set power whose direction is dependent on current position,
+         * preferably a PID type implementation
+         */
+    }
+
+    public void setLiftPosition(double targetPosition) {
+        armRotate.setTargetPosition((int) targetPosition);
+        /**
+         * Need to write code to set power whose direction is dependent on current position,
+         * preferably a PID type implementation
+         */
+    }
+
+    /**
+     * Get the encoder information for the arm rotation motor and convert it to degrees.
+     * Mr. Morris: TO DO: Might need to initialize arm angle on startup and/or adjust for starting/resting position.
+     *                    i.e. if starting location is -45 degrees, initialize and offset it at program start to account for this.
+     *                    Add telemetry statement to test and adjust this.
+     */
+    public double getArmAngle(){
+        return armRotate.getCurrentPosition() * 360 / (ARM_ROTATE_ENCODER_RESOLUTION * ARM_ROTATE_GEAR_RATIO);
+    }
+
+    public double getLiftExtension(){
+        return liftExtend.getCurrentPosition();
+    }
+
+    /**
+     * Mr. Morris: TO DO: may want to work in degrees, then convert to range from -0.5 to 0.5, see setWristAngle() function
+     * Send the gripper the new position to go to
+     * @param offset distance from center mid point.
+     */
+    public void setGripperPosition(double offset) {
+        offset = Range.clip(offset, -0.5, 0.5);
+        gripper.setPosition(MID_SERVO + offset);
+    }
+
+    /**
+     * Send the wrist to a certain angle in degrees
+     * @param angle is the angle the wrist should go to, in degrees
+     */
+    public void setWristAngle(double angle){
+        angle = Range.clip(angle / WRIST_MAX_ANGLE, -0.5, 0.5); // convert angle in degrees to a range from -0.5 to 0.5.
+        wrist.setPosition(MID_SERVO + angle);
+    }
+/*
+    // Toggle streaming on/off to save CPU resources
+    public void toggleStreaming(){
+        if (streaming) visionPortal.stopStreaming();
+        else {
+            visionPortal.resumeStreaming();
+        }
+        streaming = !streaming;
+    }
+ */
 }
