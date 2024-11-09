@@ -60,13 +60,14 @@ import com.qualcomm.robotcore.util.Range;
  *                              5) Revise code for vision, commented out for now.
  *                              6) Migrate code to Iterative program so that end game behavior can be set - i.e. the hang mechanism can stay engaged for several seconds after stop.
  *                              7) Consider implementing Driver-centric toggle
+ *                              8) Set up code for hardware limit switches for arm and lift
  *
  *     COMPLETE, NEEDS TESTING: 1) Finish updating to match RobotHardware file definitions, then delete or comment out @Disabled
  *                              3) Use math to keep wrist turned so that gripper is level with ground (rotate relative to arm rotation)
  *                              4) Add elapsed time tracking and implement better button press delay method. See <a href="https://stemrobotics.cs.pdx.edu/node/7262.html">...</a>
  */
 
-@TeleOp(name="Morris POV Drive", group="Test Code")
+@TeleOp(name="Morris POV Drive", group="Robot")
 //@Disabled
 public class MorrisPOVDrive extends LinearOpMode {
 
@@ -76,7 +77,7 @@ public class MorrisPOVDrive extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        double drive;
+        double forward;
         double turn;
         double strafe;
         double armRotateTarget = robot.getArmAngle();  // Initialize arm to current position
@@ -90,7 +91,7 @@ public class MorrisPOVDrive extends LinearOpMode {
         robot.init();
 
         // Send telemetry message to signify robot waiting;
-        telemetry.addData(">", "Robot Ready.  Press Play to start OpMode.");    //
+        telemetry.addData(">", "Robot Ready.  Press Play to start OpMode.");
         telemetry.update();
 
         // Wait for the game to start (driver presses PLAY)
@@ -114,15 +115,15 @@ public class MorrisPOVDrive extends LinearOpMode {
 
             // Run wheels in POV mode (note: The joystick goes negative when pushed forward, so negate it)
             // In this mode the Left stick moves the robot fwd and back, the Right stick turns left and right.
-            // This way it's also easy to just drive straight, or just turn.
+            // This way it's also easy to just forward straight, or just turn.
 
             ////Mr. Morris: Alternatively we could use right trigger for forward, left trigger for reverse, left_stick_x for turning
-            drive = -gamepad1.left_stick_y;
+            forward = -gamepad1.left_stick_y;
             strafe = gamepad1.left_stick_x;
             turn  =  gamepad1.right_stick_x;
 
-            // Combine drive and turn for blended motion. Use org.firstinspires.ftc.teamcode.RobotHardware class
-            robot.mechanumDriveRobot(drive, strafe, turn);
+            // Combine forward and turn for blended motion. Use org.firstinspires.ftc.teamcode.RobotHardware class
+            robot.mechanumDrive(forward, strafe, turn);
 
             // Use gamepad left & right Bumpers to open and close the gripper claw
             // Use the SERVO constants defined in org.firstinspires.ftc.teamcode.RobotHardware class.
@@ -196,7 +197,7 @@ public class MorrisPOVDrive extends LinearOpMode {
             telemetry.addData("Gripper Open/Closed", "Left and Right Bumpers");
             telemetry.addData("-", "-------");
 
-            telemetry.addData("Drive Power", "%.2f", drive);
+            telemetry.addData("Drive Power", "%.2f", forward);
             telemetry.addData("Turn Power",  "%.2f", turn);
 //            telemetry.addData("Arm Rotate Power",  "%.2f", armRotateTarget);
 //            telemetry.addData("Arm Extend Power",  "%.2f", armExtendTarget);

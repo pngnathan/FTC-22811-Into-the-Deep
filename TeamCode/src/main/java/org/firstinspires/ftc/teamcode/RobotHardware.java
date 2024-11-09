@@ -28,19 +28,10 @@ package org.firstinspires.ftc.teamcode;
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-
-import android.util.Size;
-
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
-
-import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.vision.VisionPortal;
 
 /*
  * This file works in conjunction with the External Hardware Class sample called: org.firstinspires.ftc.teamcode.MorrisPOVDrive.java
@@ -74,22 +65,33 @@ public class RobotHardware {
     private DcMotor rightFrontDrive  = null;
     private DcMotor rightRearDrive  = null;
     private DcMotor armRotate = null;
-    private DcMotor liftExtend = null;
+    private DcMotor lift = null;
     private Servo   wrist = null;
     private Servo   gripper = null;
 
+    // Calculate the COUNTS_PER_INCH for your specific drive train.
+    // Go to your motor vendor website to determine your motor's COUNTS_PER_MOTOR_REV
+    // For external drive gearing, set DRIVE_GEAR_REDUCTION as needed.
+    // For example, use a value of 2.0 for a 12-tooth spur gear driving a 24-tooth spur gear.
+    // This is gearing DOWN for less speed and more torque.
+    // For gearing UP, use a gear ratio less than 1.0. Note this will affect the direction of wheel rotation.
+    static final double     COUNTS_PER_MOTOR_REV    = 537.7 ;    // GoBilda 312rpm motor has this encoder resolution
+    static final double     DRIVE_GEAR_REDUCTION    = 1 ;     // No Gear Reduction.
+    static final double     WHEEL_DIAMETER_INCHES   = 96 * 25.4 ;     // 96mm converted to inches. For figuring circumference
+    static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
+                                                                        (WHEEL_DIAMETER_INCHES * 3.1415);
 
     // Define Drive constants.  Make them public so they CAN be used by the calling OpMode
-    // Mr. Morris: TO DO: test and update servo speeds.
+    /** Mr. Morris: TO DO: test and update servo speeds. */
     public static final double MID_SERVO       =  0.5 ;
     public static final double GRIPPER_INCREMENT = 0.02, GRIPPER_MAX = 1, GRIPPER_MIN = 0 ;  // sets rate to move gripper servo and max and min travel. If you use SRS servo programmer to set limits, this will be 1 and 0. If you need to limit travel in the software, this is where to do it.
-    public static final double WRIST_SPEED = 0.02 ; // sets rate to move wrist servo
+    public static final double WRIST_INCREMENT = 0.02 ; // sets rate to move wrist servo
     public static final double WRIST_MAX_ANGLE  = 300 ; // Adjust this angle if SRS servo programmer has limited servo travel to less than 300
     public static final int ARM_INCREMENT_DEGREES = 5, ARM_ROTATE_MAX = 225, ARM_ROTATE_MIN = -45 ;
-    public static final double ARM_ROTATE_ENCODER_RESOLUTION = 2786.2, ARM_ROTATE_GEAR_RATIO = 20 ;
+    public static final double ARM_ROTATE_ENCODER_RESOLUTION = 28, ARM_ROTATE_GEAR_RATIO = 60 ;
     public static final double LIFT_EXTEND_POWER  = 0.10, LIFT_RETRACT_POWER  = -0.10 ;
-    public static final double LIFT_EXTEND_MAX = 1000; // TO DO: This is almost certainly a wrong number for the max travel.
-    public static final double LIFT_RETRACT_MAX = 0; // TO DO: This is almost certainly a wrong number for the max travel.
+    public static final double LIFT_EXTEND_MAX = 1000; /** TO DO: This is almost certainly a wrong number for the max travel.*/
+    public static final double LIFT_RETRACT_MAX = 0; /** TO DO: This is almost certainly a wrong number for the max travel.*/
 
 //     Define vision defaults
 //        private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
@@ -114,8 +116,8 @@ public class RobotHardware {
         leftRearDrive  = myOpMode.hardwareMap.get(DcMotor.class, "left_rear_drive");
         rightFrontDrive = myOpMode.hardwareMap.get(DcMotor.class, "right_front_drive");
         rightRearDrive  = myOpMode.hardwareMap.get(DcMotor.class, "right_rear_drive");
-//        armRotate   = myOpMode.hardwareMap.get(DcMotor.class, "arm_rotate");
-//        armExtend   = myOpMode.hardwareMap.get(DcMotor.class, "arm_extend");
+        armRotate   = myOpMode.hardwareMap.get(DcMotor.class, "arm_rotate");
+        lift   = myOpMode.hardwareMap.get(DcMotor.class, "lift");
 
         // To drive forward, most robots need the motor on one side to be reversed, because the axles point in opposite directions.
         // Pushing the left stick forward MUST make robot go forward. So adjust these two lines based on your first test drive.
@@ -125,13 +127,21 @@ public class RobotHardware {
         rightFrontDrive.setDirection(DcMotor.Direction.REVERSE);
         rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
 
+        // Reset encoders at start of program
+        leftFrontDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftRearDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightFrontDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightRearDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armRotate.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         // Since there are encoders connected, RUN_USING_ENCODER mode is enabled for greater accuracy
         leftFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftRearDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightFrontDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightRearDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         armRotate.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        liftExtend.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        lift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // Define and initialize ALL installed servos.
         wrist = myOpMode.hardwareMap.get(Servo.class, "wrist");
@@ -175,34 +185,46 @@ public class RobotHardware {
 
     /**
      * Calculates the motor powers required to achieve the requested
-     * robot motions: drive (Axial motion) strafe (Lateral motion) and turn (Yaw motion).
+     * robot motions: forward (Axial motion) strafe (Lateral motion) and turn (Yaw motion).
      * Then sends these power levels to the motors.
      *
-     * @param drive     Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
+     * @param forward     Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
      * @param strafe    Right/Left strafing (-1.0 to 1.0) +ve is right
      * @param turn      Right/Left turning power (-1.0 to 1.0) +ve is CW
      */
-    public void mechanumDriveRobot(double drive, double strafe, double turn) {
-        // Combine drive, strafe, and turn for blended motion.
-        double leftFront  = drive + strafe + turn;
-        double LeftRear = drive - strafe + turn;
-        double rightFront = drive - strafe - turn;
-        double rightRear = drive + strafe - turn;
+    public void mechanumDrive(double forward, double strafe, double turn) {
+        // Combine forward, strafe, and turn for blended motion.
+        double leftFront  = forward + strafe + turn;
+        double leftRear = forward - strafe + turn;
+        double rightFront = forward - strafe - turn;
+        double rightRear = forward + strafe - turn;
 
         // Scale the values so none of them exceed +/- 1.0
-        double max1 = Math.max(Math.abs(leftFront),Math.abs(LeftRear));
+        double max1 = Math.max(Math.abs(leftFront),Math.abs(leftRear));
         double max2 = Math.max(Math.abs(rightFront), Math.abs(rightRear));
         double max = Math.max(Math.abs(max1), Math.abs(max2));
         if (max > 1.0)
         {
             leftFront /= max;
-            LeftRear /= max;
+            leftRear /= max;
             rightFront /= max;
             rightRear /= max;
         }
 
-        // Use existing function to drive wheels on both sides..
-        setDrivePower(leftFront, LeftRear, rightFront, rightRear);
+        // Use existing function to forward wheels on both sides..
+        setDrivePower(leftFront, leftRear, rightFront, rightRear);
+    }
+
+    /*
+     *  Method to perform a relative move, based on encoder counts.
+     *  Encoders are not reset as the move is based on the current position.
+     *  Move will stop if any of three conditions occur:
+     *  1) Move gets to the desired position
+     *  2) Move runs out of time
+     *  3) Driver stops the OpMode running.
+     */
+    public void encoderDrive(double speed, double forwardInches, double rightInches, double rotateAngle){
+
     }
 
     /**
@@ -225,6 +247,9 @@ public class RobotHardware {
         rightRearDrive.setPower(rightRear);
     }
 
+    public int[] getDriveEncoderValues(){
+        return new int[]{leftFrontDrive.getCurrentPosition(), leftRearDrive.getCurrentPosition(), rightFrontDrive.getCurrentPosition(), rightRearDrive.getCurrentPosition()};
+    }
     /**
      * Pass the requested arm power to the appropriate hardware drive motor
      *
@@ -257,7 +282,7 @@ public class RobotHardware {
     }
 
     public double getLiftExtension(){
-        return liftExtend.getCurrentPosition();
+        return lift.getCurrentPosition();
     }
 
     /**
