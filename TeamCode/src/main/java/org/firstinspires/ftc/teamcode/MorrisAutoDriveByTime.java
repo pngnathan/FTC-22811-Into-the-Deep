@@ -61,121 +61,174 @@ public class MorrisAutoDriveByTime extends LinearOpMode {
 
     /* Declare OpMode members. */
     int legNumber = 0;
+    boolean isRedAlliance = true;
+    boolean isNearStart = true;
+    boolean option3 = true;
+    double startingPause = 0;
 
     @Override
     public void runOpMode() {
         // initialize all the hardware, using the hardware class. See how clean and simple this is?
         robot.init();
 
-        // Send telemetry message to signify robot waiting;
-        telemetry.addData(">", "Robot Ready.  Press Play to start OpMode.");
-        telemetry.update();
+        // Select Alliance, starting point, and route options
+        configAutonomous();
 
         // Wait for the game to start (driver presses START)
         waitForStart();
 
-        // Step through each leg of the path, ensuring that the OpMode has not been stopped along the way.
+        ElapsedTime runTime = new ElapsedTime();
+        while(runTime.seconds() < startingPause); // do nothing during starting pause period
 
-        // Step 1:  Drive forward for 3 seconds
-        driveStraightForTime(.6, 3);
+        if(isRedAlliance && isNearStart) {
+            // Drive forward for 3 seconds
+            driveForTime(3, .6, 0, 0);
 
-        // Step 2:  Spin right for 1.3 seconds
-        turnForTime(.5, 1.3);
+            // Spin right for 1.3 seconds
+            driveForTime(1.3, 0, .5, 0);
 
-        // Step 3: Strafe right for 1 second
-        strafeForTime(.5, 1);
+            // Stop
+            driveForTime(1, 0, 0, 0);
 
-        // Step 4: Drive diagonally to left for 2 seconds
-        driveDiagonalForTime(.3,.3,2);
+            telemetry.addData("Path", "Complete");
+            telemetry.update();
+            sleep(1000);
+        }
+        if(!isRedAlliance && isNearStart) {
+            // Strafe right for 1 second
+            driveForTime(1, 0, 0, .5);
 
-        // Step 5:  Drive backward for 1 second
-        driveStraightForTime(-5,1);
+            // Drive diagonally to left for 2 seconds
+            driveForTime(2, .3, 0, .3);
 
-        // Step 6: Drive in an arc to the left for 4 seconds
-        driveArcForTime(.5,-1,4);
+            // Stop
+            driveForTime(1, 0, 0, 0);
 
-        // Step 7:  Stop
-        driveStraightForTime(0, 0.5);
+        }
+        if(isRedAlliance && !isNearStart){
+            // Drive backward for 1 second
+            driveForTime(1, -1, 0, 0);
 
-        telemetry.addData("Path", "Complete");
-        telemetry.update();
-        sleep(1000);
+            // Drive in a tight arc to the left for 4 seconds
+            driveForTime(4, .5, -1, 0);
+
+            // Stop
+            driveForTime(1, 0, 0, 0);
+        }
+        if(!isRedAlliance && !isNearStart){
+            // Stop
+            driveForTime(1, 0, 0, 0);
+        }
+    telemetry.addData("Path", "Complete");
+    telemetry.update();
+    sleep(1000);
     }
 
     /**
-    * @param turn   Turn speed (-1.0 to 1.0) +ve is right
-    * @param time   Time in seconds to complete the action.
+    * @param time       Time in seconds to complete the action.
+    * @param forward     Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
+    * @param turn       Turn speed (-1.0 to 1.0) +ve is right
+    * @param strafe     Right/Left strafing (-1.0 to 1.0) +ve is right
     * This function is used for just turning.
     */
-    private void turnForTime(double turn, double time) {
+    private void driveForTime(double time, double forward, double turn, double strafe) {
         legNumber += 1;
-        robot.mechanumDrive(0, 0, turn);
-        ElapsedTime runtime = new ElapsedTime();
-        while (opModeIsActive() && (runtime.seconds() < time)) {
-            telemetry.addData("Path", "Leg ", legNumber, ": %4.1f S Elapsed", runtime.seconds());
+        robot.mechanumDrive(forward, strafe, turn);
+        ElapsedTime legTime = new ElapsedTime();
+        while (opModeIsActive() && (legTime.seconds() < time)) {
+            telemetry.addData("Path", "Leg ", legNumber, ": %4.1f S Elapsed", legTime.seconds());
             telemetry.update();
         }
     }
 
-    /**
-     * Drive in an arc for a given time.
-     * @param forward   Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
-     * @param turn      Turn speed (-1.0 to 1.0) +ve is right
-     * @param time      Time in seconds to complete the action.
-     */
-    private void driveArcForTime(double forward, double turn, double time) {
-        legNumber += 1;
-        robot.mechanumDrive(forward, 0, turn);
-        ElapsedTime runtime = new ElapsedTime();
-        while (opModeIsActive() && (runtime.seconds() < time)) {
-            telemetry.addData("Path", "Leg ", legNumber, ": %4.1f S Elapsed", runtime.seconds());
-            telemetry.update();
-        }
-    }
 
     /**
-     * @param forward   Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
-     * @param time      Time in seconds to complete the action.
-     * This version of driveForTime is used for driving in an arc.
+     * This method used a technique called latching with all the button presses where it only toggles
+     * when you let go of the button. This keeps from accidentally registering multiple button presses
+     * when you hold the button for too long.
      */
-    private void driveStraightForTime(double forward, double time) {
-        legNumber += 1;
-        robot.mechanumDrive(forward, 0, 0);
-        ElapsedTime runtime = new ElapsedTime();
-        while (opModeIsActive() && (runtime.seconds() < time)) {
-            telemetry.addData("Path", "Leg ", legNumber, ": %4.1f S Elapsed", runtime.seconds());
+    private void configAutonomous(){
+        int selection = 0;
+        final int SELECTION_COUNT = 4; // Number of options in selection list.
+        boolean dpadDownPressed = false;
+        boolean dpadUpPressed = false;
+        boolean dpadRightOrLeftPressed = false;
+        boolean configComplete = false;
+
+        // This loops until the x
+        while(!isStarted() && !configComplete){
+            // This is the first example of latching. This while loop can cycle hundreds of times a
+            // second. This waits until the dpad_down button is not pressed before it increments
+            // the selection
+            if(gamepad1.dpad_down) dpadDownPressed = true;
+            else if(dpadDownPressed && !gamepad1.dpad_down){
+                dpadDownPressed = false;
+                selection += 1;
+                selection = selection % SELECTION_COUNT; // cycles around to beginning of list after the end
+                                                         // % means the remainder after dividing
+            }
+
+            if(gamepad1.dpad_up) dpadUpPressed = true;
+            else if(dpadUpPressed && !gamepad1.dpad_up){
+                dpadUpPressed = false;
+                if (selection >0) selection -= 1;
+            }
+
+            // This block displays an arrow next to the option currently being selected and waits for
+            // you to toggle that option by pressing either dpad_left or dpad_right
+            if(selection == 1) {
+                telemetry.addData("-->Alliance: ", isRedAlliance ?"Red": "Blue"); //This syntax is an inline if statement that can be used in simple cases
+                if(gamepad1.dpad_right || gamepad1.dpad_left) dpadRightOrLeftPressed = true;
+                else if(dpadRightOrLeftPressed && !(gamepad1.dpad_right || gamepad1.dpad_left)){
+                    dpadRightOrLeftPressed = false;
+                    isRedAlliance = !isRedAlliance;
+                }
+            } else telemetry.addData("Alliance: ", isRedAlliance ?"Red": "Blue");
+
+            if(selection == 2) {
+                telemetry.addData("-->Starting Position: ", isNearStart ?"Near": "Far");
+                if(gamepad1.dpad_right || gamepad1.dpad_left) dpadRightOrLeftPressed = true;
+                else if(dpadRightOrLeftPressed && !(gamepad1.dpad_right || gamepad1.dpad_left)){
+                    dpadRightOrLeftPressed = false;
+                    isNearStart = !isNearStart;
+                }
+            } else telemetry.addData("Starting Position: ", isNearStart ?"Near": "Far");
+
+            if(selection == 3) {
+                telemetry.addData("-->Option 3: ", option3 ?"True": "False");
+                if(gamepad1.dpad_right || gamepad1.dpad_left) dpadRightOrLeftPressed = true;
+                else if(dpadRightOrLeftPressed && !(gamepad1.dpad_right || gamepad1.dpad_left)){
+                    dpadRightOrLeftPressed = false;
+                    isNearStart = !isNearStart;
+                }
+            } else telemetry.addData("Option 3: ", option3 ?"True": "False");
+
+            if(selection == 4) {
+                telemetry.addData("-->Starting Pause: ", startingPause +" seconds");
+                if(gamepad1.dpad_right) dpadRightOrLeftPressed = true;
+                else if(dpadRightOrLeftPressed && !gamepad1.dpad_right){
+                    dpadRightOrLeftPressed = false;
+                    startingPause += .5;
+                }
+                if(gamepad1.dpad_left) dpadRightOrLeftPressed = true;
+                else if(dpadRightOrLeftPressed && !gamepad1.dpad_left){
+                    dpadRightOrLeftPressed = false;
+                    startingPause -= .5;
+                }
+            } else telemetry.addData("Starting Pause: ", startingPause +" seconds");
+
+            telemetry.addLine("\nPress [x] to complete");
+
+            // Press x to end Autonomous Configuration
+            if(gamepad1.x) configComplete = true;
             telemetry.update();
         }
+
+        // Send telemetry message to signify robot waiting;
+        telemetry.addData(">", "Autonomous Configuration Complete.  Press Play to start OpMode.");
+        telemetry.update();
     }
 
-    /**
-     * Drive diagonally while facing forward.
-     * @param forward   Fwd/Rev driving power (-1.0 to 1.0) +ve is forward
-     * @param strafe    Right/Left strafing (-1.0 to 1.0) +ve is right
-     * @param time      Time in seconds to complete the action.
-     */
-    private void driveDiagonalForTime(double forward, double strafe, double time) {
-        legNumber += 1;
-        robot.mechanumDrive(forward, strafe, 0);
-        ElapsedTime runtime = new ElapsedTime();
-        while (opModeIsActive() && (runtime.seconds() < time)) {
-            telemetry.addData("Path", "Leg ", legNumber, ": %4.1f S Elapsed", runtime.seconds());
-            telemetry.update();
-        }
-    }
 
-    /**
-     * Drive to the right (+) or left (-) for a given time.
-     * @param strafe    Right/Left strafing (-1.0 to 1.0) +ve is right
-     * @param time      Time in seconds to complete the action.
-     */
-    private void strafeForTime(double strafe, double time) {
-        legNumber += 1;
-        robot.mechanumDrive(0, strafe, 0);
-        ElapsedTime runtime = new ElapsedTime();
-        while (opModeIsActive() && (runtime.seconds() < time)) {
-            telemetry.addData("Path", "Leg ", legNumber, ": %4.1f S Elapsed", runtime.seconds());
-            telemetry.update();
-        }
-    }
+
 }

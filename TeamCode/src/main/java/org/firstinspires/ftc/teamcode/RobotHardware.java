@@ -89,7 +89,7 @@ public class RobotHardware {
     public static final double WRIST_MAX_ANGLE  = 300 ; // Adjust this angle if SRS servo programmer has limited servo travel to less than 300
     public static final int ARM_INCREMENT_DEGREES = 5, ARM_ROTATE_MAX = 225, ARM_ROTATE_MIN = -45 ;
     public static final double ARM_ROTATE_ENCODER_RESOLUTION = 28, ARM_ROTATE_GEAR_RATIO = 60 ;
-    public static final double LIFT_EXTEND_POWER  = 0.10, LIFT_RETRACT_POWER  = -0.10 ;
+    public static final double LIFT_EXTEND_INCREMENT = 0.10, LIFT_RETRACT_INCREMENT = -0.10 ;
     public static final double LIFT_EXTEND_MAX = 1000; /** TO DO: This is almost certainly a wrong number for the max travel.*/
     public static final double LIFT_RETRACT_MAX = 0; /** TO DO: This is almost certainly a wrong number for the max travel.*/
 

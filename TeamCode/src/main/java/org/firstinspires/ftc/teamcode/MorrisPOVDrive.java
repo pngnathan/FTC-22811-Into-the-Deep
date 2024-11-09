@@ -171,12 +171,12 @@ public class MorrisPOVDrive extends LinearOpMode {
             // Use the MOTOR constants defined in org.firstinspires.ftc.teamcode.RobotHardware class.
             if (gamepad1.x && getRuntime() - xLastTime > BUTTON_PRESS_DELAY) {
                 if (liftExtendTarget < RobotHardware.LIFT_EXTEND_MAX)
-                    liftExtendTarget += RobotHardware.LIFT_EXTEND_POWER; // extend when X is pressed
+                    liftExtendTarget += RobotHardware.LIFT_EXTEND_INCREMENT; // extend when X is pressed
                 xLastTime = getRuntime();
                 }
             else if (gamepad1.b && getRuntime() - bLastTime > BUTTON_PRESS_DELAY) {
                 if (liftExtendTarget > RobotHardware.LIFT_RETRACT_MAX) {
-                    liftExtendTarget -= RobotHardware.LIFT_RETRACT_POWER; // retract when B is pressed
+                    liftExtendTarget -= RobotHardware.LIFT_RETRACT_INCREMENT; // retract when B is pressed
                 }
                 bLastTime = getRuntime();
             }
@@ -193,7 +193,7 @@ public class MorrisPOVDrive extends LinearOpMode {
             telemetry.addData("Drive", "Left Stick");
             telemetry.addData("Turn", "Right Stick");
             telemetry.addData("Arm Up/Down", "Y & A Buttons");
-            telemetry.addData("Arm Extend/Retract", "X & B Buttons");
+            telemetry.addData("Lift Extend/Retract", "X & B Buttons");
             telemetry.addData("Gripper Open/Closed", "Left and Right Bumpers");
             telemetry.addData("-", "-------");
 
